@@ -1,0 +1,48 @@
+# Model configuration for the heart-disease MLOps project
+
+# MLflow experiment tracking configuration
+mlflow:
+    tracking_uri: "sqlite:///mlflow.db"
+    pretrain_experiment: "heart_disease_pretrain"
+    finetune_experiment: "heart_disease_finetune"
+    eval_experiment: "heart_disease_evaluation"
+
+# Clinical cost matrix (used by evaluate.py)
+cost_matrix:
+    # High penalty for missing a disease (false negative)
+    cost_false_negative: 50.0
+    # Lower penalty for false alarm (false positive)
+    cost_false_positive: 5.0
+    cost_true_positive: 0.0
+    cost_true_negative: 0.0
+
+# Training / fine-tuning hyperparameters (used by fine_tune.py)
+# ==========================================
+# TRAINING HYPERPARAMETERS (For fine_tune.py)
+# ==========================================
+fine_tuning:
+  boosting_rounds: 50
+  
+  xgb_params:
+    learning_rate: 0.005
+    max_depth: 3
+    alpha: 5.0       # L1 Regularization
+    lambda: 5.0      # L2 Regularization
+    
+  lgb_params:
+    learning_rate: 0.005
+    max_depth: 3
+    lambda_l1: 5.0   # L1 Regularization
+    lambda_l2: 5.0   # L2 Regularization
+    
+  catboost_params:
+    learning_rate: 0.005
+    depth: 3         # CatBoost uses 'depth' instead of 'max_depth'
+    l2_leaf_reg: 5.0 # CatBoost L2 Regularization
+
+# ==========================================
+# API SERVING CONFIGURATION (For app.py)
+# ==========================================
+serving:
+  model_uri: "models:/heart_disease_production/latest"
+  fallback_threshold: 0.50

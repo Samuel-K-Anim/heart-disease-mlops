@@ -15,6 +15,7 @@ class TestProjectStructure(unittest.TestCase):
             "src/ingestion.py",
             "src/train_base.py",
             "src/fine_tune.py",
+            "src/monitor.py",
             "src/evaluate.py",
             "src/app.py",
             "tests",

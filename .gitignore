@@ -1,6 +1,28 @@
-__pycache__/
-*.pyc
-.venv/
+==========================================
+
+DATA FOLDER SECURITY
+
+==========================================
+
+data/raw/*
+data/processed/*
+
+!data/raw/.gitkeep
+!data/processed/.gitkeep
+
+Ignore Feast and MLflow local databases
+
+data/*.db
+mlflow.db
+mlruns/
+
+==========================================
+
+PYTHON ARTIFACTS
+
+==========================================
+
+pycache/
+*.py[cod]
 .pytest_cache/
-data/*
-!data/sample.csv
+.env

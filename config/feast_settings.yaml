@@ -1,3 +1,0 @@
-project: heart_disease_mlops
-registry: feature_store/registry.db
-provider: local
