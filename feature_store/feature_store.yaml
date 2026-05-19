@@ -1,6 +1,10 @@
 project: heart_disease_mlops
+# PORTFOLIO NOTE: Using local registry/offline/online stores for reproducible execution.
+# IN PRODUCTION: Registry -> S3/GCS, Offline -> Snowflake/BigQuery, Online -> Redis.
 registry: data/registry.db
 provider: local
+offline_store:
+    type: file
 online_store:
-  type: sqlite
-  path: data/online_store.db
+    type: sqlite
+    path: data/online_store.db
