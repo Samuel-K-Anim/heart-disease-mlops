@@ -12,9 +12,9 @@ data/processed/*
 
 Ignore Feast and MLflow local databases
 
-data/*.db
-mlflow.db
-mlruns/
+# data/*.db
+# mlflow.db
+# mlruns/
 
 ==========================================
 

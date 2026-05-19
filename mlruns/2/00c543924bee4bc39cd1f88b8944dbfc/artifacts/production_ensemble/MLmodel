@@ -1,0 +1,24 @@
+artifact_path: production_ensemble
+flavors:
+  python_function:
+    artifacts:
+      cb_model_path:
+        path: artifacts\cb_model.cbm
+        uri: C:\Users\Nerge\AppData\Local\Temp\tmp2of5wb1k\cb_model.cbm
+      lgb_model_path:
+        path: artifacts\lgb_model.txt
+        uri: C:\Users\Nerge\AppData\Local\Temp\tmp2of5wb1k\lgb_model.txt
+      xgb_model_path:
+        path: artifacts\xgb_model.json
+        uri: C:\Users\Nerge\AppData\Local\Temp\tmp2of5wb1k\xgb_model.json
+    cloudpickle_version: 2.2.1
+    env:
+      conda: conda.yaml
+      virtualenv: python_env.yaml
+    loader_module: mlflow.pyfunc.model
+    python_model: python_model.pkl
+    python_version: 3.11.15
+mlflow_version: 2.7.1
+model_uuid: 4fd3e3c7d3f4473090bf05613b5e2374
+run_id: 00c543924bee4bc39cd1f88b8944dbfc
+utc_time_created: '2026-05-19 18:51:27.259730'
