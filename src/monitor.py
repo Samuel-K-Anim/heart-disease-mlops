@@ -7,7 +7,7 @@ from evidently.metrics import ColumnDriftMetric
 from feast import FeatureStore
 
 # Suppress minor Evidently warnings for cleaner logs
-warnings.filterwarnings('ignore')
+warnings.filterwarnings("ignore")
 
 # ==========================================
 # CONFIGURATION
@@ -16,9 +16,10 @@ warnings.filterwarnings('ignore')
 # it is considered statistically drifted.
 DRIFT_THRESHOLD = 0.05
 
+
 def fetch_data_for_monitoring():
     """
-    Fetches the reference (synthetic training) and current (clinical production) 
+    Fetches the reference (synthetic training) and current (clinical production)
     datasets to calculate distribution shifts.
     """
     print("Fetching reference and current datasets from feature store...")
@@ -29,61 +30,76 @@ def fetch_data_for_monitoring():
         curr_df = pd.read_parquet("data/processed/clinical_features.parquet")
     except FileNotFoundError:
         raise FileNotFoundError("Parquet files missing. Run ingestion.py first.")
-    
+
     # Drop non-feature columns that shouldn't be evaluated for drift
-    cols_to_drop = ['patient_id', 'event_timestamp', 'created_timestamp', 'target']
-    
+    cols_to_drop = ["patient_id", "event_timestamp", "created_timestamp", "target"]
+
     ref_features = ref_df.drop(columns=[c for c in cols_to_drop if c in ref_df.columns])
-    curr_features = curr_df.drop(columns=[c for c in cols_to_drop if c in curr_df.columns])
-    
+    curr_features = curr_df.drop(
+        columns=[c for c in cols_to_drop if c in curr_df.columns]
+    )
+
     return ref_features, curr_features
+
 
 def run_drift_analysis():
     """
     Executes Evidently AI to generate a drift report and evaluate system stability.
     """
     ref_data, curr_data = fetch_data_for_monitoring()
-    
-    print(f"Analyzing drift between Reference (N={len(ref_data)}) and Current (N={len(curr_data)})...")
+
+    print(
+        f"Analyzing drift between Reference (N={len(ref_data)}) and Current (N={len(curr_data)})..."
+    )
 
     # 1. Initialize the Evidently Report
     # We use the DataDriftPreset for an overarching view, and add specific column metrics
     # for critical clinical features.
-    report = Report(metrics=[
-        DataDriftPreset(),
-        ColumnDriftMetric(column_name='chol'),    # Cholesterol is highly susceptible to demographic shift
-        ColumnDriftMetric(column_name='thalach')  # Max heart rate
-    ])
+    report = Report(
+        metrics=[
+            DataDriftPreset(),
+            ColumnDriftMetric(
+                column_name="chol"
+            ),  # Cholesterol is highly susceptible to demographic shift
+            ColumnDriftMetric(column_name="thalach"),  # Max heart rate
+        ]
+    )
 
     # 2. Compute Drift
     report.run(reference_data=ref_data, current_data=curr_data)
 
     # 3. Extract Results as a Python Dictionary
     results = report.as_dict()
-    
+
     # Analyze the dataset-level drift metric
-    dataset_drift = results['metrics'][0]['result']['dataset_drift']
-    drifted_features_count = results['metrics'][0]['result']['number_of_drifted_columns']
-    total_features = results['metrics'][0]['result']['number_of_columns']
-    
+    dataset_drift = results["metrics"][0]["result"]["dataset_drift"]
+    drifted_features_count = results["metrics"][0]["result"][
+        "number_of_drifted_columns"
+    ]
+    total_features = results["metrics"][0]["result"]["number_of_columns"]
+
     print("\n=============================================")
     print("      EVIDENTLY AI DRIFT ANALYSIS REPORT     ")
     print("=============================================")
     print(f"Dataset Drift Detected:   {'YES ⚠️' if dataset_drift else 'NO ✅'}")
     print(f"Drifted Features:         {drifted_features_count} out of {total_features}")
-    
+
     # 4. Analyze specific critical features
     # Evidently metrics are ordered as they were added to the Report.
     # index 1 is 'chol', index 2 is 'thalach'
-    chol_drift_score = results['metrics'][1]['result']['drift_score']
-    thalach_drift_score = results['metrics'][2]['result']['drift_score']
-    
+    chol_drift_score = results["metrics"][1]["result"]["drift_score"]
+    thalach_drift_score = results["metrics"][2]["result"]["drift_score"]
+
     print("\n--- Critical Feature Assessment ---")
-    print(f"Cholesterol Drift Score:  {chol_drift_score:.4f} (Threshold: {DRIFT_THRESHOLD})")
+    print(
+        f"Cholesterol Drift Score:  {chol_drift_score:.4f} (Threshold: {DRIFT_THRESHOLD})"
+    )
     if chol_drift_score < DRIFT_THRESHOLD:
         print("  -> ⚠️ CRITICAL: Cholesterol distribution has shifted.")
-        
-    print(f"Heart Rate Drift Score:   {thalach_drift_score:.4f} (Threshold: {DRIFT_THRESHOLD})")
+
+    print(
+        f"Heart Rate Drift Score:   {thalach_drift_score:.4f} (Threshold: {DRIFT_THRESHOLD})"
+    )
     if thalach_drift_score < DRIFT_THRESHOLD:
         print("  -> ⚠️ CRITICAL: Heart rate distribution has shifted.")
 
@@ -92,7 +108,7 @@ def run_drift_analysis():
     dashboard_path = "drift_dashboard.html"
     report.save_html(dashboard_path)
     print(f"\n✅ Interactive HTML dashboard generated at: {dashboard_path}")
-    
+
     # 6. Trigger Logic (Simulated)
     if dataset_drift:
         print("\n🚨 AUTOMATED TRIGGER FIRED: Dataset drift exceeds tolerance.")
@@ -100,6 +116,7 @@ def run_drift_analysis():
         # In production: requests.post("http://airflow-webserver/api/v1/dags/fine_tune/dagRuns")
     else:
         print("\n✅ System Stable. No retraining required.")
+
 
 if __name__ == "__main__":
     run_drift_analysis()
