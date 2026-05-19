@@ -22,7 +22,6 @@ app = FastAPI(
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],  # Allows all origins (perfect for local testing)
-    
 )
 # Global variables to hold model and threshold
 MODEL = None
