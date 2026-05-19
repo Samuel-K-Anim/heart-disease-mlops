@@ -38,8 +38,9 @@ jobs:
           flake8 src/ --count --exit-zero --max-complexity=10 --max-line-length=120 --statistics
 
       - name: Run Unit Tests
-        run: |
-          pytest tests/
+        env:
+          PYTHONPATH: .
+        run: pytest tests/
 
   docker_build:
     needs: lint_and_test

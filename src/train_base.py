@@ -95,12 +95,11 @@ def train_base_model():
     df = fetch_synthetic_data(store)
 
     # 3. Preprocess
-    # Assuming standard Kaggle target column 'target'
     target_col = "target"
     features = [
         col
         for col in df.columns
-        if col not in ["target", "patient_id", "event_timestamp", "created_timestamp"]
+        if col not in [target_col, "patient_id", "event_timestamp", "created_timestamp"]
     ]
 
     X = df[features]

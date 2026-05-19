@@ -57,9 +57,9 @@ def optimize_threshold():
     Evaluates the production ensemble and calculates the cost-optimal threshold (t*).
     """
     df = fetch_validation_data()
-    y_true = df["target"].values
+    y_true = df["Heart Disease"].values
     X_val = df.drop(
-        columns=["target", "patient_id", "event_timestamp", "created_timestamp"]
+        columns=["Heart Disease" , "patient_id", "event_timestamp", "created_timestamp"]
     )
 
     print("Loading Production Ensemble from MLflow...")

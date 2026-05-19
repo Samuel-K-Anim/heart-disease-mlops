@@ -69,7 +69,7 @@ def fine_tune_and_package():
     store = FeatureStore(repo_path="feature_store/")
     df = fetch_clinical_data(store)
 
-    target_col = "Heart Disease"  # Assuming the target column is named 'Heart Disease' in the clinical dataset
+    target_col = "Heart Disease" 
     features = [
         col
         for col in df.columns
