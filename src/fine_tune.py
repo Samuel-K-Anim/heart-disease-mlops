@@ -34,7 +34,7 @@ class StackedEnsembleWrapper(mlflow.pyfunc.PythonModel):
         self.cb_model = cb.CatBoostClassifier()
         self.cb_model.load_model(context.artifacts["cb_model_path"])
 
-    def predict(self, context, model_input):
+    def predict(self, context, model_input, params=None):
         """Generates predictions from all 3 models and averages them."""
         # XGBoost requires DMatrix
         dtest = xgb.DMatrix(model_input)
@@ -69,7 +69,7 @@ def fine_tune_and_package():
     store = FeatureStore(repo_path="feature_store/")
     df = fetch_clinical_data(store)
 
-    target_col = "Heart Disease"
+    target_col = "target"
     features = [
         col
         for col in df.columns
@@ -78,6 +78,7 @@ def fine_tune_and_package():
 
     X_clin = df[features]
     y_clin = df[target_col]
+    y_clin = y_clin.map({"Absence": 0, "Presence": 1})
 
     print("Loading Base Models from MLflow Registry...")
     # In production, you'd fetch by "Alias" or "Version".
@@ -92,7 +93,7 @@ def fine_tune_and_package():
     xgb_ft_params = config["fine_tuning"]["xgb_params"]
     lgb_ft_params = config["fine_tuning"]["lgb_params"]
     cb_ft_params = config["fine_tuning"]["catboost_params"]
-    num_boost_round = config["fine_tuning"]["num_boost_round"]
+    num_boost_round = config["fine_tuning"]["boosting_rounds"]
 
     with mlflow.start_run(run_name="clinical_ensemble_finetuning"):
         print("Executing Warm Start Fine-Tuning on Clinical Data (N=270)...")

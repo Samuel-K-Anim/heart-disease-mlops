@@ -5,6 +5,39 @@ import numpy as np
 from datetime import datetime, timedelta
 
 
+def standardize_schema(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Renames verbose Kaggle column names to standard medical shortcodes
+    expected by the feature store and downstream API.
+    """
+    # Mapping of long Kaggle names to standard shortcodes
+    schema_mapping = {
+        "Age": "age",
+        "Sex": "sex",
+        "Chest pain type": "cp",
+        "BP": "trestbps",
+        "Cholesterol": "chol",
+        "FBS over 120": "fbs",
+        "EKG results": "restecg",
+        "Max HR": "thalach",
+        "Exercise angina": "exang",
+        "ST depression": "oldpeak",
+        "Slope of ST": "slope",
+        "Number of vessels fluro": "ca",
+        "Thallium": "thal",
+        "Target": "target",
+        "Heart Disease": "target",
+        # "Heart Disease": "Heart Disease"
+    }
+
+    # Rename columns that exist in the mapping
+    df = df.rename(columns=schema_mapping)
+
+    # Ensure all column names are lowercase as a safety measure
+    df.columns = df.columns.str.lower()
+    return df
+
+
 def ingest_and_timestamp_data(synthetic_path: str, clinical_path: str, output_dir: str):
     """
     Ingests flat CSVs, assigns unique patient IDs, and generates deterministic
@@ -13,6 +46,10 @@ def ingest_and_timestamp_data(synthetic_path: str, clinical_path: str, output_di
     print("Loading raw data...")
     df_synth = pd.read_csv(synthetic_path)
     df_clin = pd.read_csv(clinical_path)
+
+    print("Standardizing Schemas...")
+    df_synth = standardize_schema(df_synth)
+    df_clin = standardize_schema(df_clin)
 
     print("Harmonizing Schemas and IDs...")
 
@@ -67,5 +104,7 @@ def ingest_and_timestamp_data(synthetic_path: str, clinical_path: str, output_di
 
 if __name__ == "__main__":
 
-    # ingest_and_timestamp_data("data/raw/train.csv", "data/raw/heart.csv", "data/processed")
+    ingest_and_timestamp_data(
+        "data/raw/train.csv", "data/raw/Heart_Disease_Prediction.csv", "data/processed"
+    )
     pass

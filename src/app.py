@@ -2,8 +2,10 @@
 
 import os
 import time
+from typing import Any
 import pandas as pd
 from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import mlflow
 import yaml
@@ -17,6 +19,13 @@ app = FastAPI(
     version="1.0.0",
 )
 
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Allows all origins (perfect for local testing)
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 # Global variables to hold model and threshold
 MODEL = None
 OPTIMAL_THRESHOLD = None
@@ -78,23 +87,55 @@ def load_production_assets():
 
     try:
         # Dynamically fetch the optimal threshold (t*) computed by evaluate.py
-        # We query the MLflow tracking server for the latest evaluation run
-        experiment = mlflow.get_experiment_by_name("heart_disease_evaluation")
-        if experiment is None:
-            raise ValueError("Evaluation experiment not found.")
+        # mlflow.search_runs may return either a pandas.DataFrame (older API)
+        # or a list of Run objects (mlflow 2.x). Handle both gracefully.
+        runs: Any = mlflow.search_runs(search_all_experiments=True)
 
-        runs = mlflow.search_runs(
-            experiment_ids=[experiment.experiment_id],
-            order_by=["start_time DESC"],
-            max_results=1,
-        )
+        # Case A: DataFrame-like result
+        if hasattr(runs, "empty") and hasattr(runs, "columns"):
+            df_runs = runs
+            if df_runs.empty or "metrics.optimal_threshold" not in df_runs.columns:
+                raise ValueError(
+                    "Metric 'optimal_threshold' not found in any MLflow run."
+                )
 
-        if runs.empty:
-            raise ValueError("No evaluation runs found.")
+            valid_runs = df_runs.dropna(subset=["metrics.optimal_threshold"])
+            if valid_runs.empty:
+                raise ValueError(
+                    "Metric exists in tracking server but all values are NaN."
+                )
 
-        # Extract the specific metric logged in evaluate.py
-        OPTIMAL_THRESHOLD = runs.iloc[0]["metrics.optimal_threshold"]
-        print(f"Optimal clinical threshold loaded: t* = {OPTIMAL_THRESHOLD:.3f}")
+            valid_runs = valid_runs.sort_values(by="start_time", ascending=False)
+            OPTIMAL_THRESHOLD = valid_runs.iloc[0]["metrics.optimal_threshold"]
+
+        else:
+            # Case B: list of Run objects
+            if not isinstance(runs, list) or len(runs) == 0:
+                raise ValueError("No evaluation runs found.")
+
+            # Filter runs that have the metric present and not None
+            valid_runs = [
+                r
+                for r in runs
+                if getattr(r, "data", None)
+                and getattr(r.data, "metrics", None)
+                and "optimal_threshold" in r.data.metrics
+                and r.data.metrics["optimal_threshold"] is not None
+            ]
+
+            if not valid_runs:
+                raise ValueError(
+                    "Metric 'optimal_threshold' not found in any MLflow run."
+                )
+
+            # Sort by start_time if available, newest first
+            def _start_time(run):
+                return float(getattr(getattr(run, "info", None), "start_time", 0) or 0)
+
+            valid_runs = sorted(valid_runs, key=_start_time, reverse=True)
+            OPTIMAL_THRESHOLD = valid_runs[0].data.metrics["optimal_threshold"]
+
+        print(f"✅ Optimal clinical threshold loaded: t* = {OPTIMAL_THRESHOLD:.3f}")
 
     except Exception as e:
         print(
@@ -121,6 +162,11 @@ def predict_heart_disease(payload: PatientPayload):
     df_input = pd.DataFrame([input_dict])
 
     # 2. Execute Inference
+    if MODEL is None:
+        raise HTTPException(
+            status_code=503, detail="Model not loaded. Service unavailable."
+        )
+
     try:
         # The PyFunc wrapper handles the XGB/LGBM/CatBoost averaging automatically
         probability = MODEL.predict(df_input)[0]

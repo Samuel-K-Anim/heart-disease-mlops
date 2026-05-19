@@ -57,9 +57,11 @@ def optimize_threshold():
     Evaluates the production ensemble and calculates the cost-optimal threshold (t*).
     """
     df = fetch_validation_data()
-    y_true = df["Heart Disease"].values
+    # Map text labels to 0 and 1, then convert to a numpy array of integers
+    y_true = np.asarray(df["target"].map({"Absence": 0, "Presence": 1}), dtype=int)
+
     X_val = df.drop(
-        columns=["Heart Disease", "patient_id", "event_timestamp", "created_timestamp"]
+        columns=["target", "patient_id", "event_timestamp", "created_timestamp"]
     )
 
     print("Loading Production Ensemble from MLflow...")
@@ -112,11 +114,11 @@ def optimize_threshold():
 
     with mlflow.start_run(run_name="threshold_optimization"):
         # Log metrics
-        mlflow.log_metric("pr_auc", pr_auc)
-        mlflow.log_metric("optimal_threshold", optimal_t)
-        mlflow.log_metric("minimum_clinical_cost", min_cost)
-        mlflow.log_metric("false_negatives_at_t_star", fn)
-        mlflow.log_metric("false_positives_at_t_star", fp)
+        mlflow.log_metric("pr_auc", float(pr_auc))
+        mlflow.log_metric("optimal_threshold", float(optimal_t))
+        mlflow.log_metric("minimum_clinical_cost", float(min_cost))
+        mlflow.log_metric("false_negatives_at_t_star", int(fn))
+        mlflow.log_metric("false_positives_at_t_star", int(fp))
 
         # Generate a Cost Curve plot
         plt.figure(figsize=(10, 6))

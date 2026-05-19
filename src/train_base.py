@@ -20,6 +20,21 @@ mlflow.set_tracking_uri("sqlite:///mlflow.db")
 mlflow.set_experiment("heart_disease_pretrain")
 
 
+def get_xgb_device() -> str:
+    """
+    Returns the best available XGBoost device ("cuda" or "cpu").
+    """
+    try:
+        build_info = xgb.build_info()
+        use_cuda = str(build_info.get("USE_CUDA", "0")).lower()
+        if use_cuda in {"1", "true", "yes", "on"}:
+            return "cuda"
+    except Exception:
+        pass
+
+    return "cpu"
+
+
 def fetch_synthetic_data(store: FeatureStore) -> pd.DataFrame:
     """
     Retrieves the synthetic dataset from Feast using time-travel logic.
@@ -53,7 +68,7 @@ def objective(trial, X, y):
         "eval_metric": "aucpr",
         "tree_method": "hist",
         # Enable GPU acceleration if available
-        "device": "cuda" if xgb.core.core.XGBoostError else "cpu",
+        "device": get_xgb_device(),
         "booster": trial.suggest_categorical("booster", ["gbtree"]),
         "lambda": trial.suggest_float("lambda", 1e-8, 10.0, log=True),
         "alpha": trial.suggest_float("alpha", 1e-8, 10.0, log=True),
@@ -104,6 +119,7 @@ def train_base_model():
 
     X = df[features]
     y = df[target_col]
+    y = y.map({"Absence": 0, "Presence": 1})
 
     print("Starting Hyperparameter Tuning with Optuna...")
     study = optuna.create_study(direction="maximize")
@@ -127,7 +143,7 @@ def train_base_model():
             "objective": "binary:logistic",
             "eval_metric": "aucpr",
             "tree_method": "hist",
-            "device": "cuda" if xgb.core.core.XGBoostError else "cpu",
+            "device": get_xgb_device(),
         }
     )
 
@@ -149,7 +165,7 @@ def train_base_model():
         "verbose": 0,
     }
 
-    with mlflow.start_run(run_name="synthetic_ensemble_pretrain"):
+    with mlflow.start_run(run_name="synthetic_ensemble_pretrain") as run:
         # XGBoost
         dtrain_xgb = xgb.DMatrix(X, label=y)
         xgb_base = xgb.train(xgb_params, dtrain_xgb, num_boost_round=300)
@@ -177,9 +193,7 @@ def train_base_model():
             registered_model_name="heart_disease_cb_base",
         )
 
-        print(
-            f"Base ensemble registered in MLflow under run ID: {mlflow.active_run().info.run_id}"
-        )
+        print(f"Base ensemble registered in MLflow under run ID: {run.info.run_id}")
 
 
 if __name__ == "__main__":
