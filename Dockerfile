@@ -34,6 +34,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY src/ src/
 COPY mlflow.db .
+COPY config/ config/ 
 COPY mlruns/ mlruns/
 
 # Expose the port FastAPI runs on
