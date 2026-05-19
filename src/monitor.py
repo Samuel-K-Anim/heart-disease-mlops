@@ -32,7 +32,12 @@ def fetch_data_for_monitoring():
         raise FileNotFoundError("Parquet files missing. Run ingestion.py first.")
 
     # Drop non-feature columns that shouldn't be evaluated for drift
-    cols_to_drop = ["patient_id", "event_timestamp", "created_timestamp", "Heart Disease"]
+    cols_to_drop = [
+        "patient_id",
+        "event_timestamp",
+        "created_timestamp",
+        "Heart Disease",
+    ]
 
     ref_features = ref_df.drop(columns=[c for c in cols_to_drop if c in ref_df.columns])
     curr_features = curr_df.drop(
