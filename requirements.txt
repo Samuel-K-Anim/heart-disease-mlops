@@ -25,6 +25,8 @@ feast==0.38.0
 fastapi==0.103.2
 uvicorn==0.23.2
 pydantic==2.4.2
+httpx==0.25.2
+
 
 # ==========================================
 # MONITORING & EVALUATION
