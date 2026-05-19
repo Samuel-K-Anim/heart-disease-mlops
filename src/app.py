@@ -66,7 +66,11 @@ def load_production_assets():
     print("Initializing production microservice...")
 
     # Read the config
-    with open("config/model_config.yaml", "r") as file:
+    BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    config_path = os.path.join(BASE_DIR, "config", "model_config.yaml")
+
+    # Update your open statement to use the absolute path
+    with open(config_path, "r") as file:
         config = yaml.safe_load(file)
 
     MODEL_URI = config["serving"]["model_uri"]
