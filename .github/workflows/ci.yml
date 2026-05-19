@@ -69,6 +69,7 @@ jobs:
           context: .
           push: true # Set to false if local and not DockerHub/AWS ECR
           tags: ${{ secrets.DOCKERHUB_USERNAME }}/heart-disease-api:latest
+          outputs: type=image,push=true,allow=monolithic=true
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
