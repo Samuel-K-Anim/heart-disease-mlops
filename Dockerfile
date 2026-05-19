@@ -1,6 +1,6 @@
 # Slim version reduces the image size significantly
 
-FROM python:3.10-slim
+FROM python:3.11-slim
 
 # Set environment variables to optimize Python execution
 
