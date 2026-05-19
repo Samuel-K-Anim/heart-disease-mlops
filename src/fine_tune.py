@@ -26,13 +26,19 @@ class StackedEnsembleWrapper(mlflow.pyfunc.PythonModel):
 
     def load_context(self, context):
         """Loads the native models from the saved artifacts."""
-        self.xgb_model = xgb.Booster()
-        self.xgb_model.load_model(context.artifacts["xgb_model_path"])
+        # Clean paths by converting Windows backslashes (\) to Linux forward slashes (/)
+        xgb_path = context.artifacts["xgb_model_path"].replace("\\", "/")
+        lgb_path = context.artifacts["lgb_model_path"].replace("\\", "/")
+        cb_path = context.artifacts["cb_model_path"].replace("\\", "/")
 
-        self.lgb_model = lgb.Booster(model_file=context.artifacts["lgb_model_path"])
+        # Load models using the cleaned paths
+        self.xgb_model = xgb.Booster()
+        self.xgb_model.load_model(xgb_path)
+
+        self.lgb_model = lgb.Booster(model_file=lgb_path)
 
         self.cb_model = cb.CatBoostClassifier()
-        self.cb_model.load_model(context.artifacts["cb_model_path"])
+        self.cb_model.load_model(cb_path)
 
     def predict(self, context, model_input, params=None):
         """Generates predictions from all 3 models and averages them."""

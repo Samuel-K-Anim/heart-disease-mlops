@@ -96,6 +96,17 @@ def load_production_assets():
                 WHERE artifact_uri LIKE '%/mlruns/%'
 
                 """)
+            # Convert all Windows backslashes (\) to Linux forward slashes (/)
+            cursor.execute("""
+                UPDATE model_versions 
+                SET source = REPLACE(source, '\', '/')
+            """)
+
+            cursor.execute("""
+                UPDATE runs 
+                SET artifact_uri = REPLACE(artifact_uri, '\', '/')
+            """)
+
             conn.commit()
             conn.close()
             print(
