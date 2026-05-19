@@ -69,11 +69,11 @@ def fine_tune_and_package():
     store = FeatureStore(repo_path="feature_store/")
     df = fetch_clinical_data(store)
 
-    target_col = "target"
+    target_col = "Heart Disease"  # Assuming the target column is named 'Heart Disease' in the clinical dataset
     features = [
         col
         for col in df.columns
-        if col not in ["target", "patient_id", "event_timestamp", "created_timestamp"]
+        if col not in [target_col, "patient_id", "event_timestamp", "created_timestamp"]
     ]
 
     X_clin = df[features]
