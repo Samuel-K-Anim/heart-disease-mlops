@@ -9,6 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import mlflow
 import yaml
+import sqlite3
 
 # ==========================================
 # CONFIGURATION & INITIALIZATION
@@ -77,6 +78,31 @@ def load_production_assets():
     FALLBACK_THRESHOLD = config["serving"]["fallback_threshold"]
 
     try:
+        try:
+            # Connect directly to the SQLite metadata database inside the container
+            conn = sqlite3.connect("mlflow.db")
+            cursor = conn.cursor()
+
+            # Rewrite absolute Windows local machine paths to the universal Linux container path
+            cursor.execute("""
+                UPDATE model_versions 
+                SET source = './mlruns' || SUBSTR(source, INSTR(source, '/mlruns/') + 7)
+                WHERE source LIKE '%/mlruns/%'
+                
+                """)
+            cursor.execute("""
+                UPDATE runs 
+                SET artifact_uri = './mlruns' || SUBSTR(artifact_uri, INSTR(artifact_uri, '/mlruns/') + 7)
+                WHERE artifact_uri LIKE '%/mlruns/%'
+
+                """)
+            conn.commit()
+            conn.close()
+            print(
+                "Successfully patched MLflow SQLite database paths for Linux deployment."
+            )
+        except Exception as patch_err:
+            print(f"Path patching warning: {patch_err}")
         # Load the unified PyFunc ensemble
         MODEL = mlflow.pyfunc.load_model(MODEL_URI)
         print("Ensemble model loaded successfully.")
