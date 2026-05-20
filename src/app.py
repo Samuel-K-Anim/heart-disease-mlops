@@ -28,6 +28,7 @@ app.add_middleware(
 # Global variables to hold model and threshold
 MODEL = None
 OPTIMAL_THRESHOLD = None
+IS_RENDER = os.environ.get("RENDER") is not None
 
 
 class PatientPayload(BaseModel):
@@ -79,59 +80,74 @@ def load_production_assets():
     FALLBACK_THRESHOLD = config["serving"]["fallback_threshold"]
 
     try:
-        try:
-            # Connect directly to the SQLite metadata database inside the container
-            conn = sqlite3.connect("mlflow.db")
-            cursor = conn.cursor()
+        if IS_RENDER:
+            print("Running on Render: Activating Linux path sanitizer...")
+            try:
+                # Connect directly to the SQLite metadata database inside the container
+                conn = sqlite3.connect("mlflow.db")
+                cursor = conn.cursor()
 
-            # Rewrite absolute Windows local machine paths to the universal Linux container path
-            cursor.execute("""
-                UPDATE model_versions 
-                SET source = './mlruns' || SUBSTR(source, INSTR(source, '/mlruns/') + 7)
-                WHERE source LIKE '%/mlruns/%'
-                
-                """)
-            cursor.execute("""
-                UPDATE runs 
-                SET artifact_uri = './mlruns' || SUBSTR(artifact_uri, INSTR(artifact_uri, '/mlruns/') + 7)
-                WHERE artifact_uri LIKE '%/mlruns/%'
+                # Rewrite absolute Windows local machine paths to the universal Linux container path
+                cursor.execute("""
+                    UPDATE model_versions 
+                    SET source = './mlruns' || SUBSTR(source, INSTR(source, '/mlruns/') + 7)
+                    WHERE source LIKE '%/mlruns/%'
+                    
+                    """)
+                cursor.execute("""
+                    UPDATE runs 
+                    SET artifact_uri = './mlruns' || SUBSTR(artifact_uri, INSTR(artifact_uri, '/mlruns/') + 7)
+                    WHERE artifact_uri LIKE '%/mlruns/%'
 
-                """)
+                    """)
 
-            conn.commit()
-            conn.close()
-            # Overwrite the hardcoded Windows paths inside the MLmodel file itself
+                conn.commit()
+                conn.close()
+                # Overwrite the hardcoded Windows paths inside the MLmodel file itself
 
-            # Find the meta files inside the container's mlruns structure
-            for mlmodel_path in glob.glob("mlruns/**/MLmodel", recursive=True):
-                try:
-                    with open(mlmodel_path, "r") as f:
-                        meta_data = yaml.safe_load(f)
-
-                    # If this is our custom python_model containing hardcoded Windows artifact slashes
+                for mlfile_path in glob.glob("mlruns/**/*", recursive=True):
+                    # Target only textual meta or MLmodel configurations
                     if (
-                        "flavor" in meta_data
-                        and "python_function" in meta_data["flavors"]
+                        mlfile_path.endswith("MLmodel")
+                        or mlfile_path.endswith(".yaml")
+                        or mlfile_path.endswith(".yml")
                     ):
-                        artifacts = meta_data["flavors"]["python_function"].get(
-                            "artifacts", {}
-                        )
-                        for art_key, art_val in artifacts.items():
-                            # Strip any backslashes out of the metadata definition completely
-                            if "uri" in art_val:
-                                art_val["uri"] = art_val["uri"].replace("\\", "/")
+                        try:
+                            with open(mlfile_path, "r") as f:
+                                meta_data = yaml.load(f, Loader=yaml.SafeLoader)
 
-                        # Write the sanitized configuration metadata back to disk inside the container
-                        with open(mlmodel_path, "w") as f:
-                            yaml.safe_dump(meta_data, f)
-                except Exception as meta_err:
-                    print(f"Meta cleaning warning: {meta_err}")
+                            if meta_data:
+                                # Deep-clean dictionary fields recursively for any bad slashes
+                                def sanitize_dict_paths(d):
+                                    if isinstance(d, dict):
+                                        for k, v in d.items():
+                                            if isinstance(v, str) and (
+                                                "artifacts" in v or "mlruns" in v
+                                            ):
+                                                d[k] = v.replace("\\", "/")
+                                            else:
+                                                sanitize_dict_paths(v)
+                                    elif isinstance(d, list):
+                                        for item in d:
+                                            sanitize_dict_paths(item)
 
-            print(
-                "Successfully patched MLflow paths and structural metadata for Linux."
-            )
-        except Exception as patch_err:
-            print(f"Path patching warning: {patch_err}")
+                                sanitize_dict_paths(meta_data)
+
+                                # Save the pristine, Linux-native configuration file back to disk
+                                with open(mlfile_path, "w") as f:
+                                    yaml.dump(meta_data, f, Dumper=yaml.SafeDumper)
+                        except Exception as file_clean_err:
+                            print(
+                                f"File cleaning skip on {mlfile_path}: {file_clean_err}"
+                            )
+
+                print(
+                    "Successfully deep-cleaned all structural MLflow configuration assets."
+                )
+
+            except Exception as patch_err:
+                print(f"Path patching warning: {patch_err}")
+
         # Load the unified PyFunc ensemble
         MODEL = mlflow.pyfunc.load_model(MODEL_URI)
         print("Ensemble model loaded successfully.")
