@@ -10,6 +10,7 @@ from pydantic import BaseModel
 import mlflow
 import yaml
 import sqlite3
+import glob
 
 # ==========================================
 # CONFIGURATION & INITIALIZATION
@@ -96,21 +97,38 @@ def load_production_assets():
                 WHERE artifact_uri LIKE '%/mlruns/%'
 
                 """)
-            # Convert all Windows backslashes (\) to Linux forward slashes (/)
-            cursor.execute("""
-                UPDATE model_versions 
-                SET source = REPLACE(source, '\', '/')
-            """)
-
-            cursor.execute("""
-                UPDATE runs 
-                SET artifact_uri = REPLACE(artifact_uri, '\', '/')
-            """)
 
             conn.commit()
             conn.close()
+            # Overwrite the hardcoded Windows paths inside the MLmodel file itself
+
+            # Find the meta files inside the container's mlruns structure
+            for mlmodel_path in glob.glob("mlruns/**/MLmodel", recursive=True):
+                try:
+                    with open(mlmodel_path, "r") as f:
+                        meta_data = yaml.safe_load(f)
+
+                    # If this is our custom python_model containing hardcoded Windows artifact slashes
+                    if (
+                        "flavor" in meta_data
+                        and "python_function" in meta_data["flavors"]
+                    ):
+                        artifacts = meta_data["flavors"]["python_function"].get(
+                            "artifacts", {}
+                        )
+                        for art_key, art_val in artifacts.items():
+                            # Strip any backslashes out of the metadata definition completely
+                            if "uri" in art_val:
+                                art_val["uri"] = art_val["uri"].replace("\\", "/")
+
+                        # Write the sanitized configuration metadata back to disk inside the container
+                        with open(mlmodel_path, "w") as f:
+                            yaml.safe_dump(meta_data, f)
+                except Exception as meta_err:
+                    print(f"Meta cleaning warning: {meta_err}")
+
             print(
-                "Successfully patched MLflow SQLite database paths for Linux deployment."
+                "Successfully patched MLflow paths and structural metadata for Linux."
             )
         except Exception as patch_err:
             print(f"Path patching warning: {patch_err}")
