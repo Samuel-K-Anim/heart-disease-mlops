@@ -281,3 +281,11 @@ def health_check():
         "model_loaded": MODEL is not None,
         "active_threshold": OPTIMAL_THRESHOLD,
     }
+
+@app.get("/")
+def read_root():
+    return {
+        "message": "Heart Disease Prediction API is running",
+        "docs": "/docs",
+        "health": "/health"
+    }
