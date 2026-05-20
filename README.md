@@ -2,7 +2,7 @@
 
 A production-grade, continuous training MLOps pipeline designed to predict cardiovascular disease risk. This project moves beyond static Jupyter notebooks by implementing a full lifecycle architecture: time-travel feature engineering, tabular transfer learning, clinical cost-matrix optimization, real-time drift monitoring, and an automated CI/CD/CD deployment pipeline.
 
-🔴 **Live Interactive Dashboard** (Deployed via Render) - Click Here (Replace with your frontend link)  
+🔴 **Live Interactive Dashboard** (Deployed via Render) - [Click Here](https://samuel-k-anim.github.io/testing-base/)
 🟢 **Live API Health Endpoint** | **API Docs**
 
 ---
