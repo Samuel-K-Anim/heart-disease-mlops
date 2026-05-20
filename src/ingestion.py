@@ -105,6 +105,6 @@ def ingest_and_timestamp_data(synthetic_path: str, clinical_path: str, output_di
 if __name__ == "__main__":
 
     ingest_and_timestamp_data(
-        "data/raw/train.csv", "data/raw/Heart_Disease_Prediction.csv", "data/processed"
+        "data/raw/train.csv", "data/raw/heart.csv", "data/processed"
     )
     pass
