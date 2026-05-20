@@ -282,10 +282,11 @@ def health_check():
         "active_threshold": OPTIMAL_THRESHOLD,
     }
 
+
 @app.get("/")
 def read_root():
     return {
         "message": "Heart Disease Prediction API is running",
         "docs": "/docs",
-        "health": "/health"
+        "health": "/health",
     }
